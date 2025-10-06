@@ -1,2 +1,4 @@
 .env
 myenv/
+backend/db.sqlite3
+backend/faiss_index
