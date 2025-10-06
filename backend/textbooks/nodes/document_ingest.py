@@ -4,10 +4,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from langchain_openai import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
 from .chunk_document import chunk_document
 from .extract_topics import extract_topics_and_subtopics
 from .load_document import load_document
+from langchain_community.vectorstores import FAISS
+
 embeddings = OpenAIEmbeddings()
 
 

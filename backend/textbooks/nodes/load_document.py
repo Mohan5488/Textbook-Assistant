@@ -1,4 +1,4 @@
-from langchain.document_loaders import PyPDFLoader, UnstructuredWordDocumentLoader
+from langchain_community.document_loaders import PyPDFLoader, UnstructuredWordDocumentLoader
 
 def load_document(file_path: str):
     if file_path.endswith(".pdf"):
