@@ -2,13 +2,17 @@ from rest_framework.views import APIView, Response
 from .serializers import  LoginSerializer, UserSerializer
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
-from rest_framework.authentication import TokenAuthentication
+from rest_framework.authentication import TokenAuthentication, SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from django.utils.timezone import now
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from textbooks.nodes.document_ingest import document_ingest_node
+from allauth.account.signals import user_logged_in
+from django.dispatch import receiver
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 class LoginView(APIView):
     def post(self, request):
@@ -18,6 +22,7 @@ class LoginView(APIView):
             token, _ = Token.objects.get_or_create(user=user)
             user.last_login = now()  
             user.save(update_fields=['last_login'])
+            request.session["login_type"] = "manual"
             return Response({
                 'message': 'Login successful',
                 'username': user.username,
@@ -30,6 +35,18 @@ class LoginView(APIView):
         objs = User.objects.all()
         serializer = UserSerializer(objs, many=True)
         return Response(serializer.data, status=200)
+
+@receiver(user_logged_in)
+def create_auth_token(request, user, **kwargs):
+    token, created = Token.objects.get_or_create(user=user)
+    print("API Token:", token.key)
+
+@receiver(user_logged_in)
+def track_login_type(request, user, **kwargs):
+    if request.path.startswith("/accounts/google/login/callback/"):
+        request.session["login_type"] = "oauth"
+    else:
+        request.session["login_type"] = "manual"
 
 class DocumentParser(APIView):
 
@@ -77,6 +94,12 @@ class DocumentParser(APIView):
             "status": result.get("status", "parsed")
         }, status=status.HTTP_201_CREATED)
 
+@method_decorator(csrf_exempt, name='dispatch')
+class GetTokenView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
 
-
-
+    def get(self, request):
+        token, _ = Token.objects.get_or_create(user=request.user)
+        login_type = request.session.get("login_type", "manual")
+        return Response({"token": token.key, "login_type": login_type})

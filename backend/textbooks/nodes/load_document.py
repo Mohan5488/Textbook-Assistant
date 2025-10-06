@@ -8,3 +8,5 @@ def load_document(file_path: str):
     else:
         raise ValueError("Unsupported file type")
     return loader.load()
+
+    # Load through dotsocr VLLM.
